@@ -13,6 +13,11 @@ of current runtime behavior, see [`docs/CURRENT-STATE.md`](docs/CURRENT-STATE.md
 
 ## [Unreleased]
 
+- Added first-phase Traditional Chinese (`zh-TW`) and English localization with
+  centralized parity-tested catalogs, browser locale detection, persistent and
+  accessible language selection, DOM bindings for static and generated UI,
+  locale-aware Intl formatting, and a metric/imperial formatter API for future
+  measurement renderers.
 - Keyboard focus rings now survive active/selected button styles across the
   interface. Visual Styles, Location cities and points of interest, search,
   Context/mission actions, Cockpit utilities, and sliders retain a distinct

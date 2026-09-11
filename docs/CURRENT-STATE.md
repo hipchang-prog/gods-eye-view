@@ -1,5 +1,24 @@
 # God's Eye View Current State
 
+## Localization and units
+
+- The interface supports Taiwan Traditional Chinese (`zh-TW`) and English.
+  An explicit choice in `gev:locale:v1` wins; otherwise browser languages are
+  checked in order. Traditional/Hant/Hong Kong Chinese resolves to `zh-TW`,
+  English variants resolve to `en`, unsupported browser lists fall back to
+  English, and a browser with no language signal uses the site default `zh-TW`.
+  Automatic detection is not written to storage.
+- The keyboard-accessible selector at the upper right switches language. The
+  formatter architecture supports locale-independent metric/imperial choices
+  through `gev:units:v1` and defaults to metric for `zh-TW` and imperial for
+  English. A unit selector is intentionally not exposed until existing visible
+  measurement renderers subscribe and rerender on changes.
+- Static UI uses `data-i18n`, `data-i18n-title`, `data-i18n-aria-label`, and
+  `data-i18n-placeholder`. A mutation observer tags known exact labels emitted
+  by existing runtime renderers, providing a low-intrusion migration seam.
+  Number, local date/time and relative-time helpers use `Intl`; explicitly
+  operational timestamps continue to format in UTC.
+
 ## Keyboard interaction and focus
 
 - Enter on the map-source disclosure opens immediately. A short Space press

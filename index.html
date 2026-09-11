@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-TW">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -17,7 +17,7 @@
   <div id="world-overlay-root" aria-hidden="true">
     <canvas id="world-overlay-canvas"></canvas>
   </div>
-  <div id="world-overlay-actions" class="world-overlay-accessibility" role="region" aria-label="Visible map targets">
+  <div id="world-overlay-actions" class="world-overlay-accessibility" role="region" aria-label="Visible map targets" data-i18n-aria-label="map.visibleTargets">
     <div id="world-overlay-action-list"></div>
     <div id="world-overlay-status" role="status" aria-live="polite" aria-atomic="true"></div>
   </div>
@@ -26,37 +26,37 @@
   <div id="title-bar">
     <div class="title-glow"></div>
     <h1><span class="title-logo brand-logo" data-logo-gaze data-logo-src="/logo.svg" aria-hidden="true"><img src="/logo.svg" alt="" /></span> <span>GOD'S EYE <span class="title-accent">VIEW</span></span></h1>
-    <p class="subtitle">NO PLACE LEFT BEHIND</p>
+    <p class="subtitle" data-i18n="app.tagline">NO PLACE LEFT BEHIND</p>
   </div>
 
   <!-- Style indicator -->
   <div id="style-indicator">
-    <span class="indicator-label">ACTIVE STYLE</span>
+    <span class="indicator-label" data-i18n="app.activeStyle">ACTIVE STYLE</span>
     <span class="indicator-value" id="active-style-name">NORMAL</span>
   </div>
 
   <!-- Top-center camera and share actions -->
-  <nav id="top-center-actions" aria-label="Globe actions">
-    <button id="clear-selected-layers" type="button" aria-label="Clear selected data layers" title="Turn off all selected data layers">
+  <nav id="top-center-actions" aria-label="Globe actions" data-i18n-aria-label="app.globeActions">
+    <button id="clear-selected-layers" type="button" aria-label="Clear selected data layers" title="Turn off all selected data layers" data-i18n-aria-label="actions.clearLayers" data-i18n-title="actions.clearLayersTitle">
       <span class="material-symbols-outlined" aria-hidden="true">layers_clear</span>
     </button>
-    <button id="share-btn" type="button" aria-label="Copy share link" title="Copy share link">
+    <button id="share-btn" type="button" aria-label="Copy share link" title="Copy share link" data-i18n-aria-label="actions.share" data-i18n-title="actions.share">
       <span class="share-icon" aria-hidden="true">&#x1F517;</span>
     </button>
-    <button id="reset-globe-view" type="button" aria-label="Reset to full globe view" title="Reset camera and return to full globe view">
+    <button id="reset-globe-view" type="button" aria-label="Reset to full globe view" title="Reset camera and return to full globe view" data-i18n-aria-label="actions.resetGlobe" data-i18n-title="actions.resetGlobeTitle">
       <span class="material-symbols-outlined" aria-hidden="true">public</span>
     </button>
   </nav>
   <div id="global-loading-status" role="status" aria-live="polite" aria-atomic="true" hidden>
-    <span id="global-loading-label">LOADING LIVE DATA</span>
+    <span id="global-loading-label" data-i18n="status.loadingLiveData">LOADING LIVE DATA</span>
     <span id="global-loading-detail"></span>
   </div>
   <div id="traffic-sync-chip" aria-live="polite">
-    <span id="traffic-sync-label">syncing road network</span>
+    <span id="traffic-sync-label" data-i18n="status.syncingRoads">syncing road network</span>
     <span id="traffic-sync-progress">0%</span>
   </div>
   <div id="cctv-sync-chip" aria-live="polite">
-    <span id="cctv-sync-label">loading frames</span>
+    <span id="cctv-sync-label" data-i18n="status.loadingFrames">loading frames</span>
     <span id="cctv-sync-progress">0/0</span>
   </div>
 
@@ -567,7 +567,7 @@
             <button id="search-toggle" class="search-toggle-btn" title="Search any location">
               <span>&#x1F50E;</span>
             </button>
-            <input type="text" id="location-search" placeholder="Search any location..." autocomplete="off" spellcheck="false" aria-label="Search location by name or coordinates" />
+            <input type="text" id="location-search" placeholder="Search any location..." autocomplete="off" spellcheck="false" aria-label="Search location by name or coordinates" data-i18n-placeholder="search.placeholder" data-i18n-aria-label="search.placeholder" />
           </div>
         </div>
       </div>
@@ -581,7 +581,7 @@
     <div class="panel-glow"></div>
     <div class="data-panel-inner">
       <div class="panel-header">
-        <span class="panel-title">DATA LAYERS</span>
+        <span class="panel-title" data-i18n="layers.title">DATA LAYERS</span>
         <span class="panel-divider"></span>
         <button class="panel-collapse-btn" data-collapse-target="data-panel" title="Collapse panel">+</button>
       </div>
@@ -594,7 +594,7 @@
     <div class="panel-glow"></div>
     <div class="cctv-panel-inner">
       <div class="panel-header">
-        <span class="panel-title">CCTV</span>
+        <span class="panel-title" data-i18n="layers.cctv">CCTV</span>
         <span class="panel-divider"></span>
         <button class="panel-collapse-btn" data-collapse-target="cctv-panel" title="Collapse panel">+</button>
       </div>
@@ -841,7 +841,7 @@
     <header class="first-run-header">
       <span class="first-run-kicker">MISSION CONTROL · FIRST LAUNCH</span>
     </header>
-    <h2 id="first-run-title">Choose your first view</h2>
+    <h2 id="first-run-title" data-i18n="firstRun.title">Choose your first view</h2>
     <!-- The card's one persuasive line, owner-authored and VERBATIM (2026-08-23)
          — including the unspaced em dash. The arc it has to carry: this looks
          like something you should not have access to → the sources are all
@@ -878,7 +878,7 @@
         <input type="checkbox" data-first-run-suppress />
         <span>Don't show this again</span>
       </label>
-      <span>ESC to dismiss</span>
+      <span data-i18n="firstRun.escape">ESC to dismiss</span>
     </div>
     <!-- Kept out of the footer row: it swaps to mission progress and errors, and
          a live region that also holds layout makes the row jump as it speaks. -->
@@ -891,24 +891,24 @@
        that payload, so the key registry lives in src/keySetupCore.mjs alone. -->
   <button id="key-setup-chip" type="button" hidden aria-haspopup="dialog" aria-controls="key-setup">
     <span class="material-symbols-outlined" aria-hidden="true">bolt</span>
-    <span data-key-setup-chip-label>POWER UP</span>
+    <span data-key-setup-chip-label data-i18n="settings.powerUp">POWER UP</span>
   </button>
   <aside id="key-setup" role="dialog" aria-labelledby="key-setup-title" aria-describedby="key-setup-description" hidden>
     <div class="key-setup-scanline" aria-hidden="true"></div>
     <header class="key-setup-header">
-      <span class="key-setup-kicker">GROUND STATION · PROVIDER SETTINGS</span>
-      <button type="button" class="key-setup-close" data-key-setup-close aria-label="Close key setup">
+      <span class="key-setup-kicker" data-i18n="settings.provider">GROUND STATION · PROVIDER SETTINGS</span>
+      <button type="button" class="key-setup-close" data-key-setup-close aria-label="Close key setup" data-i18n-aria-label="settings.closeKeySetup">
         <span class="material-symbols-outlined" aria-hidden="true">close</span>
       </button>
     </header>
-    <h2 id="key-setup-title">Power up the globe</h2>
-    <p id="key-setup-description">The globe already flies keyless. Every key below switches on another real feed — paste one and it's saved into this app's local configuration, then the server restarts itself. Server-side keys stay on this machine; Google Maps and Cesium ion run in the browser and must be provider-restricted. Keys you configured elsewhere are shown but never touched.</p>
+    <h2 id="key-setup-title" data-i18n="settings.powerUp">Power up the globe</h2>
+    <p id="key-setup-description" data-i18n="settings.description">The globe already flies keyless. Every key below switches on another real feed — paste one and it's saved into this app's local configuration, then the server restarts itself. Server-side keys stay on this machine; Google Maps and Cesium ion run in the browser and must be provider-restricted. Keys you configured elsewhere are shown but never touched.</p>
     <div class="key-setup-rows" data-key-setup-rows></div>
     <div class="key-setup-footer">
-      <button type="button" class="key-setup-apply" data-key-setup-apply>SAVE KEYS</button>
-      <span class="key-setup-hint">ESC to close</span>
+      <button type="button" class="key-setup-apply" data-key-setup-apply data-i18n="settings.saveKeys">SAVE KEYS</button>
+      <span class="key-setup-hint" data-i18n="firstRun.escape">ESC to close</span>
     </div>
-    <p class="key-setup-note" data-key-setup-status role="status" aria-live="polite">The Google Maps key buys the photorealistic planet — everything else stacks on top.</p>
+    <p class="key-setup-note" data-key-setup-status role="status" aria-live="polite" data-i18n="settings.note">The Google Maps key buys the photorealistic planet — everything else stacks on top.</p>
   </aside>
 
   <!-- Intelligence HUD Overlay -->

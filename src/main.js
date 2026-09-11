@@ -1,4 +1,5 @@
 import * as Cesium from 'cesium';
+import './i18n/bootstrap.js';
 import { StyleManager } from './ui.js';
 import { flyToAustin } from './camera.js';
 import { DataLayerManager } from './data/manager.js';

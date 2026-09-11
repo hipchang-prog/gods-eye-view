@@ -481,52 +481,52 @@ const _militaryInstallationsRateLimiter = makeRateLimiter({ windowMs: 60_000, ma
 const _routeRateLimiter = makeRateLimiter({ windowMs: 60_000, max: 60, globalMax: 200 });
 
 /**
- * Opt-in per-IP rate limiter for the cost-bearing API proxies (OpenAI / Google).
- * DEFAULT IS UNLIMITED: when the env var is unset, `0`, or non-numeric, this
- * returns `null` and the caller skips the check entirely — a runtime no-op that
- * preserves the original behavior. Only a positive integer N enables a fixed
- * 60s window of N requests/IP (built lazily once, then reused so its per-IP
- * window state persists across requests). The global backstop is set to a
- * generous multiple of the per-IP cap so a single host can't starve the rest.
+ * Per-IP rate limiter for cost-bearing API proxies (OpenAI / Google).
+ * Missing, zero, or invalid configuration uses the mandatory bounded default.
+ * A positive integer N overrides that default for a fixed 60s window. The
+ * global backstop is a multiple of the per-client cap.
  *
  * @param {string|undefined} envValue - Raw env value (requests/min/IP).
- * @returns {((key:string)=>boolean)|null} An `allow(key)` fn, or null when unlimited.
+ * @param {number} defaultMax - Mandatory default requests/min/IP.
+ * @returns {(key:string)=>boolean} An `allow(key)` function.
  */
-function makeOptInRateLimiter(envValue) {
-  const max = Number(envValue);
-  if (!Number.isFinite(max) || max <= 0) return null; // unset/0/garbage -> unlimited
-  return makeRateLimiter({ windowMs: 60_000, max: Math.floor(max), globalMax: Math.floor(max) * 20 });
+function makeProviderRateLimiter(envValue, defaultMax) {
+  const configured = Number(envValue);
+  const max = Number.isFinite(configured) && configured > 0
+    ? Math.min(10_000, Math.floor(configured))
+    : defaultMax;
+  return makeRateLimiter({ windowMs: 60_000, max, globalMax: max * 20 });
 }
 // Built LAZILY on first request, NOT at module load: `.env` values are applied to process.env later
 // (the plugin config hook calls loadEnv → process.env, AFTER this module is imported), so reading
-// process.env here at import time would always see them unset and silently stay unlimited even when
-// configured via .env. Building on first request (like the OPENAI_API_KEY reads) sees the loaded env;
-// the result is cached so the limiter's per-IP window state persists. `null` = unlimited (default).
-let _openAiRateLimiter; // undefined = not built yet; null = unlimited; fn = active limiter
+// process.env here at import time would always see them unset. Building on first request sees the
+// loaded env; the result is cached so the limiter's per-IP window state persists.
+const OPENAI_RATE_LIMIT_DEFAULT = 30;
+const GOOGLE_RATE_LIMIT_DEFAULT = 120;
+let _openAiRateLimiter;
 let _googleRateLimiter;
-/** OpenAI cost endpoints (realtime/token + hud-summary). Null = unlimited (default). */
 function openAiRateLimiter() {
-  if (_openAiRateLimiter === undefined) _openAiRateLimiter = makeOptInRateLimiter(process.env.GEV_RATELIMIT_OPENAI_PER_MIN);
+  if (_openAiRateLimiter === undefined) {
+    _openAiRateLimiter = makeProviderRateLimiter(process.env.GEV_RATELIMIT_OPENAI_PER_MIN, OPENAI_RATE_LIMIT_DEFAULT);
+  }
   return _openAiRateLimiter;
 }
-/** Google cost endpoint (nearby-places). Null = unlimited (default). */
 function googleRateLimiter() {
-  if (_googleRateLimiter === undefined) _googleRateLimiter = makeOptInRateLimiter(process.env.GEV_RATELIMIT_GOOGLE_PER_MIN);
+  if (_googleRateLimiter === undefined) {
+    _googleRateLimiter = makeProviderRateLimiter(process.env.GEV_RATELIMIT_GOOGLE_PER_MIN, GOOGLE_RATE_LIMIT_DEFAULT);
+  }
   return _googleRateLimiter;
 }
 
 /**
- * Apply an opt-in limiter to a request, writing a 429 when over the cap.
- * When `limiter` is null (unlimited, the default) this is a no-op returning
- * `true`, so the handler proceeds exactly as before.
+ * Apply a provider limiter to a request, writing a 429 when over the cap.
  *
- * @param {((key:string)=>boolean)|null} limiter
+ * @param {(key:string)=>boolean} limiter
  * @param {import('http').IncomingMessage} req
  * @param {import('http').ServerResponse} res
  * @returns {boolean} True if the request may proceed; false if a 429 was sent.
  */
-function enforceOptInRateLimit(limiter, req, res) {
-  if (!limiter) return true; // unlimited (default) — no behavior change
+function enforceProviderRateLimit(limiter, req, res) {
   if (limiter(clientKey(req))) return true;
   res.statusCode = 429;
   res.setHeader('Content-Type', 'application/json');
@@ -536,13 +536,15 @@ function enforceOptInRateLimit(limiter, req, res) {
 }
 
 /**
- * Client key for rate limiting. Uses the real socket peer address only — we do
- * NOT trust X-Forwarded-For (client-controlled; a rotating value would mint fresh
- * quota and grow the limiter map). This is a localhost dev proxy, so the socket
- * address is the real client.
+ * Client key for rate limiting. Development uses the real socket peer only.
+ * The production adapter is isolated behind the trusted Coolify proxy network
+ * and supplies a validated `gevClientAddress` from Forwarded/X-Forwarded-For.
  */
 function clientKey(req) {
-  return String(req.socket?.remoteAddress || 'local');
+  // Production is reachable only through the trusted Coolify proxy; its adapter
+  // records the validated left-most forwarded address here. Dev remains bound
+  // to the real socket peer and does not trust client-supplied proxy headers.
+  return String(req.gevClientAddress || req.socket?.remoteAddress || 'local');
 }
 
 /** Server-side timeout ceiling (seconds) we allow inside an Overpass QL query. */
@@ -4671,6 +4673,7 @@ function cctvProxy() {
               if (requestRange) upstreamHeaders.Range = requestRange;
               const upstream = await fetch(mediaUrl, {
                 headers: upstreamHeaders,
+                signal: req.gevCctvMediaSignal,
               });
               const contentType = upstream.headers.get('content-type') || '';
               if (!upstream.ok) {
@@ -4712,6 +4715,7 @@ function cctvProxy() {
                 label: source?.provider || 'Configured source',
                 message: error?.message || 'Media fetch failed',
               });
+              if (res.writableEnded || res.destroyed) return;
               res.writeHead(502, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
               res.end(JSON.stringify({ error: 'Media proxy failed' }));
               return;
@@ -4757,6 +4761,12 @@ function cctvProxy() {
             return;
           }
 
+          // Street View is cost-bearing. Apply the same mandatory Google quota
+          // used by Places, but only when a configured key makes the fallback
+          // eligible (keyless/synthetic CCTV remains free and available).
+          if (process.env.GOOGLE_MAPS_API_KEY
+            && Number.isFinite(lat) && Number.isFinite(lon)
+            && !enforceProviderRateLimit(googleRateLimiter(), req, res)) return;
           const sv = await streetViewFallback({ lat, lon, heading, fov, pitch });
           if (sv?.ok) {
             setHealth(cameraId, {
@@ -5064,7 +5074,7 @@ function trackBackfillProxies() {
  * Keeps OPENAI_API_KEY server-side while the browser connects to the
  * Realtime API over WebRTC with a short-lived secret.
  */
-export function openAiRealtimeProxy() {
+export function openAiRealtimeProxy({ enableDebugLog = true } = {}) {
   function install(middlewares) {
     middlewares.use('/api/openai/hud-summary', async (req, res) => {
       if (req.method !== 'POST') {
@@ -5084,10 +5094,10 @@ export function openAiRealtimeProxy() {
         return;
       }
 
-      // Opt-in per-IP throttle (GEV_RATELIMIT_OPENAI_PER_MIN). Keyless HUD
+      // Per-IP throttle (GEV_RATELIMIT_OPENAI_PER_MIN). Keyless HUD
       // fallback has no provider cost and resolves above without consuming a
       // paid-endpoint quota slot.
-      if (!enforceOptInRateLimit(openAiRateLimiter(), req, res)) return;
+      if (!enforceProviderRateLimit(openAiRateLimiter(), req, res)) return;
 
       try {
         const body = await readRequestBody(req, 64 * 1024);
@@ -5128,7 +5138,7 @@ export function openAiRealtimeProxy() {
       }
     });
 
-    middlewares.use('/api/realtime/debug-log', async (req, res) => {
+    if (enableDebugLog) middlewares.use('/api/realtime/debug-log', async (req, res) => {
       if (req.method !== 'POST') {
         res.statusCode = 405;
         res.setHeader('Content-Type', 'application/json');
@@ -5161,8 +5171,8 @@ export function openAiRealtimeProxy() {
         return;
       }
 
-      // Opt-in per-IP throttle (GEV_RATELIMIT_OPENAI_PER_MIN). No-op when unset.
-      if (!enforceOptInRateLimit(openAiRateLimiter(), req, res)) return;
+      // Per-IP throttle with a bounded default when the env override is unset.
+      if (!enforceProviderRateLimit(openAiRateLimiter(), req, res)) return;
 
       const apiKey = process.env.OPENAI_API_KEY;
       if (!apiKey) {
@@ -5418,7 +5428,7 @@ export function googlePlacesContextProxy() {
         return;
       }
 
-      // Opt-in per-IP throttle (GEV_RATELIMIT_GOOGLE_PER_MIN). No-op when unset.
+      // Per-IP throttle with a bounded default when the env override is unset.
       // Inlined (not the shared helper) so the 429 body keeps this endpoint's
       // `places: []` contract that the client expects on every error response.
       const _grl = googleRateLimiter();
@@ -5537,7 +5547,7 @@ export function googlePlacesContextProxy() {
         return;
       }
 
-      // Opt-in per-IP throttle (GEV_RATELIMIT_GOOGLE_PER_MIN). No-op when unset.
+      // Per-IP throttle with a bounded default when the env override is unset.
       // Inlined (like nearby-places) so the 429 body keeps the `places: []`
       // contract the client expects on every error response.
       const _grl = googleRateLimiter();
@@ -7726,6 +7736,38 @@ function keySetupEndpoint() {
 }
 
 /**
+ * API plugins that are safe to mount in the production HTTP adapter.
+ *
+ * This deliberately excludes the Cesium build plugin and the local-only key
+ * setup endpoint. The production server invokes only each plugin's existing
+ * `configureServer` hook against a small server facade; it never creates a
+ * Vite dev server or preview server.
+ */
+export function productionApiPlugins({ enableRealtimeDebugLog = false } = {}) {
+  return [
+    openSkyProxy(),
+    celestrakProxy(),
+    tomtomProxy(),
+    firmsProxy(),
+    rocketLaunchesProxy(),
+    terrainHeightsProxy(),
+    adsbdbProxy(),
+    overpassProxy(),
+    militaryInstallationsProxy(),
+    regionalBriefProxy(),
+    weatherEffectsProxy(),
+    cctvProxy(),
+    radioBrowserProxy(),
+    gbfsProxy(),
+    adsbLolProxy(),
+    aisLiveProxy(),
+    trackBackfillProxies(),
+    openAiRealtimeProxy({ enableDebugLog: enableRealtimeDebugLog }),
+    googlePlacesContextProxy(),
+  ];
+}
+
+/**
  * Main Vite configuration factory.
  *
  * Loads .env files via Vite's loadEnv, registers Cesium + local proxy
@@ -7744,25 +7786,7 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [
       cesium(),
-      openSkyProxy(),
-      celestrakProxy(),
-      tomtomProxy(),
-      firmsProxy(),
-      rocketLaunchesProxy(),
-      terrainHeightsProxy(),
-      adsbdbProxy(),
-      overpassProxy(),
-      militaryInstallationsProxy(),
-      regionalBriefProxy(),
-      weatherEffectsProxy(),
-      cctvProxy(),
-      radioBrowserProxy(),
-      gbfsProxy(),
-      adsbLolProxy(),
-      aisLiveProxy(),
-      trackBackfillProxies(),
-      openAiRealtimeProxy(),
-      googlePlacesContextProxy(),
+      ...productionApiPlugins({ enableRealtimeDebugLog: true }),
       keySetupEndpoint(),
     ],
     server: {
