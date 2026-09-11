@@ -1962,6 +1962,46 @@ body.ui-clean-view #scene-runtime.active {
   opacity: 0.5;
 }
 
+/* ── Locale controls ─────────────────────────── */
+#locale-controls {
+  position: fixed;
+  z-index: 1002;
+  top: 18px;
+  right: 18px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border: 1px solid rgba(0, 255, 204, 0.35);
+  border-radius: 4px;
+  background: rgba(4, 12, 18, 0.88);
+  color: var(--accent, #00ffcc);
+  font: 600 10px/1.2 'JetBrains Mono', monospace;
+  text-transform: uppercase;
+}
+
+#locale-controls select {
+  max-width: 9rem;
+  border: 1px solid rgba(0, 255, 204, 0.3);
+  border-radius: 3px;
+  padding: 4px;
+  background: #07151c;
+  color: inherit;
+  font: inherit;
+}
+
+.visually-hidden {
+  position: absolute !important;
+  width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+}
+
+@media (max-width: 620px) {
+  #locale-controls { top: 8px; right: 8px; }
+  #locale-controls > label:not(.visually-hidden) { display: none; }
+  #locale-controls select { max-width: 7rem; }
+}
+
 /* ── Top-center Globe Actions ────────────────── */
 #top-center-actions {
   position: fixed;

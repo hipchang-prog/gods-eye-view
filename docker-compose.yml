@@ -1,0 +1,64 @@
+services:
+  gods-eye-view:
+    container_name: gods-eye-view
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        GOOGLE_MAPS_API_KEY: ${GOOGLE_MAPS_API_KEY:-}
+        CESIUM_ION_TOKEN: ${CESIUM_ION_TOKEN:-}
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: 3000
+      GOOGLE_SERVER_API_KEY: ${GOOGLE_SERVER_API_KEY:-}
+      OPENSKY_CLIENT_ID: ${OPENSKY_CLIENT_ID:-}
+      OPENSKY_CLIENT_SECRET: ${OPENSKY_CLIENT_SECRET:-}
+      OPENSKY_USERNAME: ${OPENSKY_USERNAME:-}
+      OPENSKY_PASSWORD: ${OPENSKY_PASSWORD:-}
+      OPENSKY_AUTH_MODE: ${OPENSKY_AUTH_MODE:-oauth}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      AISSTREAM_API_KEY: ${AISSTREAM_API_KEY:-}
+      TOMTOM_API_KEY: ${TOMTOM_API_KEY:-}
+      TOMTOM_DAILY_TILE_BUDGET: ${TOMTOM_DAILY_TILE_BUDGET:-40000}
+      FIRMS_MAP_KEY: ${FIRMS_MAP_KEY:-}
+      LL2_API_TOKEN: ${LL2_API_TOKEN:-}
+      TFL_APP_KEY: ${TFL_APP_KEY:-}
+      GEV_RATELIMIT_OPENAI_PER_MIN: ${GEV_RATELIMIT_OPENAI_PER_MIN:-30}
+      GEV_RATELIMIT_GOOGLE_PER_MIN: ${GEV_RATELIMIT_GOOGLE_PER_MIN:-120}
+      GEV_CCTV_MEDIA_PER_CLIENT: ${GEV_CCTV_MEDIA_PER_CLIENT:-2}
+      GEV_CCTV_MEDIA_GLOBAL: ${GEV_CCTV_MEDIA_GLOBAL:-50}
+      GEV_CCTV_MEDIA_MAX_LIFETIME_MS: ${GEV_CCTV_MEDIA_MAX_LIFETIME_MS:-300000}
+      TRUST_PROXY_CIDRS: ${TRUST_PROXY_CIDRS:-}
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=64m
+      - /app/.gev-cache:rw,noexec,nosuid,nodev,size=256m,uid=1000,gid=1000
+      - /app/.gev-logs:rw,noexec,nosuid,nodev,size=32m,uid=1000,gid=1000
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/healthz').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: "coolify"
+      traefik.http.routers.gods-eye-view.rule: "Host(`godseye.778815.xyz`)"
+      traefik.http.routers.gods-eye-view.entrypoints: "websecure"
+      traefik.http.routers.gods-eye-view.tls: "true"
+      traefik.http.services.gods-eye-view.loadbalancer.server.port: "3000"
+      caddy: "godseye.778815.xyz"
+      caddy.reverse_proxy: "{{upstreams 3000}}"
+    networks:
+      - coolify
+
+networks:
+  coolify:
+    external: true
+    name: coolify
